@@ -22,7 +22,7 @@ struct Opt {
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
-    env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
+    env_logger::Builder::from_env(Env::default().default_filter_or("warn")).init();
 
     let opt = Opt::from_args();
     server::serve(opt.address).await?;
