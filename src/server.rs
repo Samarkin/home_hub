@@ -18,6 +18,8 @@ struct ClimateDeviceData {
     humidity: Option<f32>,
     #[serde(skip_serializing_if = "Option::is_none")]
     battery: Option<f32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    last_update_timestamp: Option<u64>,
 }
 
 #[derive(Serialize)]
@@ -47,6 +49,7 @@ async fn get_status(
                 temperature_in_c: data.temperature_in_c,
                 humidity: data.humidity,
                 battery: data.battery,
+                last_update_timestamp: data.last_update_timestamp,
             }))
         .collect();
     let tv = entertainment_controller.get_tv_status().await.map_err(|err| {
