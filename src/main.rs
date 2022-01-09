@@ -8,6 +8,11 @@ use structopt::StructOpt;
 
 mod server;
 mod device_data_provider;
+mod entertainment_controller;
+
+// TODO: Read from config file?
+pub const GOVEE_COLLECTOR_ADDRESS: &str = "http://127.0.0.1:50051";
+pub const ENTERTAINMENT_MONITOR_ADDRESS: &str = "http://127.0.0.1:12345";
 
 #[derive(StructOpt)]
 #[structopt(

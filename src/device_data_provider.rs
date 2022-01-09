@@ -12,23 +12,22 @@ mod govee_collector {
 type RawClient = DeviceDataProviderClient<tonic::transport::Channel>;
 
 pub struct DeviceDataProvider {
+    address: &'static str,
     client: Mutex<Option<RawClient>>,
 }
 
 impl DeviceDataProvider {
-    async fn try_connect() -> Option<RawClient> {
-        // TODO: Implement service discovery
-        let addr = "http://127.0.0.1:50051";
-        info!("Connecting to {}...", addr);
-        DeviceDataProviderClient::connect(addr).await.map_err(|err| {
-            error!("Failed to connect to the device data provider at {}: {}", addr, err);
+    async fn try_connect(address: &'static str) -> Option<RawClient> {
+        info!("Connecting to {}...", address);
+        DeviceDataProviderClient::connect(address).await.map_err(|err| {
+            error!("Failed to connect to the device data provider at {}: {}", address, err);
             err
         }).ok()
     }
 
-    pub async fn new() -> DeviceDataProvider {
-        let client = Mutex::new(DeviceDataProvider::try_connect().await);
-        DeviceDataProvider{client}
+    pub async fn new(address: &'static str) -> DeviceDataProvider {
+        let client = Mutex::new(DeviceDataProvider::try_connect(address).await);
+        DeviceDataProvider{address, client}
     }
 
     pub async fn get_device_data(&self) -> Result<GetDeviceDataResponse, tonic::Status> {
@@ -38,7 +37,7 @@ impl DeviceDataProvider {
         };
         let raw_client = match &mut *client {
             Some(raw_client) => raw_client,
-            None => match DeviceDataProvider::try_connect().await {
+            None => match DeviceDataProvider::try_connect(self.address).await {
                 Some(raw_client) => client.insert(raw_client),
                 None => return Err(tonic::Status::unavailable("Failed to connect to the device data provider")),
             },

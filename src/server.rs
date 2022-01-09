@@ -7,6 +7,7 @@ use rocket::http::Status;
 use rocket::serde::{json::Json, Serialize};
 
 use crate::device_data_provider::DeviceDataProvider;
+use crate::entertainment_controller::{EntertainmentController, TvStatus};
 
 #[derive(Serialize)]
 struct ClimateDeviceData {
@@ -22,10 +23,18 @@ struct ClimateDeviceData {
 #[derive(Serialize)]
 struct StatusData {
     climate: HashMap<String, ClimateDeviceData>,
+    tv: TvStatus,
+}
+
+#[derive(Serialize)]
+struct EmptyResponse {
 }
 
 #[get("/status")]
-async fn get_status(device_data_provider: &State<DeviceDataProvider>) -> Result<Json<StatusData>, Status> {
+async fn get_status(
+    device_data_provider: &State<DeviceDataProvider>,
+    entertainment_controller: &State<EntertainmentController>
+) -> Result<Json<StatusData>, Status> {
     let response = device_data_provider.get_device_data().await.map_err(|err| {
         error!("Error when calling Govee collector ({}): {}", err.code(), err.message());
         Status::ServiceUnavailable
@@ -40,7 +49,26 @@ async fn get_status(device_data_provider: &State<DeviceDataProvider>) -> Result<
                 battery: data.battery,
             }))
         .collect();
-    Ok(Json(StatusData { climate }))
+    let tv = entertainment_controller.get_tv_status().await.map_err(|err| {
+        error!("Error when calling entertainment monitor: {}", err);
+        Status::ServiceUnavailable
+    })?;
+    Ok(Json(StatusData { climate, tv }))
+}
+
+#[post("/gaming-mode")]
+async fn start_gaming_mode(
+    entertainment_controller: &State<EntertainmentController>
+) -> Result<Json<EmptyResponse> ,Status> {
+    entertainment_controller.turn_on_pc().await.map_err(|err| {
+        error!("Error when calling entertainment monitor: {}", err);
+        Status::ServiceUnavailable
+    })?;
+    entertainment_controller.turn_on_tv("pc").await.map_err(|err| {
+        error!("Error when calling entertainment monitor: {}", err);
+        Status::ServiceUnavailable
+    })?;
+    Ok(Json(EmptyResponse{}))
 }
 
 pub async fn serve(address: SocketAddr) -> Result<(), Box<dyn Error>> {
@@ -50,8 +78,9 @@ pub async fn serve(address: SocketAddr) -> Result<(), Box<dyn Error>> {
         ..Config::default()
     };
     rocket::custom(config)
-        .manage(DeviceDataProvider::new().await)
-        .mount("/", routes![get_status])
+        .manage(DeviceDataProvider::new(crate::GOVEE_COLLECTOR_ADDRESS).await)
+        .manage(EntertainmentController::new(crate::ENTERTAINMENT_MONITOR_ADDRESS))
+        .mount("/", routes![get_status, start_gaming_mode])
         .launch()
         .await?;
     Ok(())

@@ -11,8 +11,10 @@ client requests.
 
 ### Prerequisites
 
-1. [govee_collector](https://github.com/Samarkin/govee_collector) must be running
-on the same machine.
+1. The following services must be running on the same machine:
+
+   * [govee_collector](https://github.com/Samarkin/govee_collector) 
+   * [HomeEntertainmentMonitor](https://github.com/Samarkin/HomeEntertainmentMonitor)
 
 
 ### Instructions
