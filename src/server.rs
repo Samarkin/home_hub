@@ -8,6 +8,7 @@ use rocket::serde::{json::Json, Serialize};
 
 use crate::device_data_provider::DeviceDataProvider;
 use crate::entertainment_controller::{EntertainmentController, TvStatus};
+use crate::system_controller::SystemController;
 
 #[derive(Serialize)]
 struct ClimateDeviceData {
@@ -74,6 +75,17 @@ async fn start_gaming_mode(
     Ok(Json(EmptyResponse{}))
 }
 
+#[post("/reboot")]
+async fn reboot(
+    system_controller: &State<SystemController>
+) -> Result<Json<EmptyResponse>, Status> {
+    system_controller.reboot().map_err(|err| {
+        error!("Failed to reboot: {}", err);
+        Status::InternalServerError
+    })?;
+    Ok(Json(EmptyResponse{}))
+}
+
 pub async fn serve(address: SocketAddr) -> Result<(), Box<dyn Error>> {
     let config = Config {
         address: address.ip(),
@@ -83,7 +95,8 @@ pub async fn serve(address: SocketAddr) -> Result<(), Box<dyn Error>> {
     rocket::custom(config)
         .manage(DeviceDataProvider::new(crate::GOVEE_COLLECTOR_ADDRESS).await)
         .manage(EntertainmentController::new(crate::ENTERTAINMENT_MONITOR_ADDRESS))
-        .mount("/", routes![get_status, start_gaming_mode])
+        .manage(SystemController::new())
+        .mount("/", routes![get_status, start_gaming_mode, reboot])
         .launch()
         .await?;
     Ok(())

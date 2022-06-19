@@ -9,6 +9,7 @@ use structopt::StructOpt;
 mod server;
 mod device_data_provider;
 mod entertainment_controller;
+mod system_controller;
 
 // TODO: Read from config file?
 pub const GOVEE_COLLECTOR_ADDRESS: &str = "http://127.0.0.1:50051";
